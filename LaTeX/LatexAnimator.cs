@@ -176,7 +176,6 @@ public partial class LatexAnimator : Node3D
         int anchorChunkIndex = -1
         )
     {
-        // Check if we have containers instead of characters
         if (_latexNodes[_currentExpressionIndex].GetCharacterContainers().Count == 0 
             || _latexNodes[newIndex].GetCharacterContainers().Count == 0)
         {
@@ -252,6 +251,7 @@ public partial class LatexAnimator : Node3D
         foreach (var container in _latexNodes[_currentExpressionIndex].GetCharacterContainers())
         {
             var copy = (Node3D)container.Duplicate();
+            copy.Scale = Vector3.One;
             intermediateNode.AddChild(copy);
             copy.GlobalPosition = container.GlobalPosition;
             copiesOfCurrentExpressionCharacters.Add(copy);

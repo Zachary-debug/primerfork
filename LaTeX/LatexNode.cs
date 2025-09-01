@@ -313,6 +313,30 @@ public partial class LatexNode : Node3D
 		return CompositeStateChange.Parallel(stateChanges);
 	}
 	
+	// This is a hack to work around a strange feature of state changes.
+	// They don't actually update state when they are created, so you need to set the correct initial state after they all 
+	// are defined.
+	public void ScaleCharactersToDefaultImmediate()
+	{
+		ScaleContainersImmediate(Vector3.One);
+	}
+	public void ScaleCharactersToZeroImmediate()
+	{
+		ScaleContainersImmediate(Vector3.Zero);
+	}
+
+	public void ScaleContainersImmediate(Vector3 scale)
+	{
+		var containers = GetCharacterContainers();
+
+		var i = 0;
+		foreach (var container in containers)
+		{
+			container.Scale = Vector3.One;
+			i++;
+		}
+	}
+	
 	#region Alignment
 
 	public enum HorizontalAlignmentOptions
