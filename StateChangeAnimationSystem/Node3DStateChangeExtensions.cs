@@ -40,9 +40,9 @@ public static class Node3DStateChangeExtensions
         return new PropertyStateChange(node, "scale", finalScale);
     }
 
-    public static PropertyStateChange ScaleTo(this Node3D node, float finalScale)
+    public static PropertyStateChange ScaleTo(this Node3D node, double finalScale)
     {
-        return node.ScaleTo(Vector3.One * finalScale);
+        return node.ScaleTo(Vector3.One * (float)finalScale);
     }
     
     public static PropertyStateChange RotateTo(this Node3D node, float xDeg, float yDeg, float zDeg, bool global = false)

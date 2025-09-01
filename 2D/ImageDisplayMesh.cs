@@ -17,6 +17,13 @@ public partial class ImageDisplayMesh : MeshInstance3D
         }
     }
 
+    public static ImageDisplayMesh Create(string path)
+    {
+        var idm = new ImageDisplayMesh();
+        idm.ImageTexture = ResourceLoader.Load<Texture2D>(path);
+        return idm;
+    }
+
     private void Update()
     {
         if (ImageTexture == null)
@@ -35,8 +42,21 @@ public partial class ImageDisplayMesh : MeshInstance3D
         // Create a new material and set the image texture
         var material = new StandardMaterial3D();
         material.AlbedoTexture = ImageTexture;
+        material.CullMode = BaseMaterial3D.CullModeEnum.Disabled;
 
         // Assign the material to the mesh surface
         SetSurfaceOverrideMaterial(0, material);
+    }
+
+    public void AllowTransparency()
+    {
+        var mat = (StandardMaterial3D)GetSurfaceOverrideMaterial(0);
+        mat.Transparency = BaseMaterial3D.TransparencyEnum.Alpha;
+    }
+
+    public void MakeUnshaded()
+    {
+        var mat = (StandardMaterial3D)GetSurfaceOverrideMaterial(0);
+        mat.ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded;
     }
 }

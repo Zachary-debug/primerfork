@@ -1,4 +1,5 @@
 ﻿using Godot;
+using PrimerTools.TweenSystem;
 
 namespace PrimerTools;
 
@@ -41,5 +42,19 @@ public static class MeshInstance3DExtensions
         {
             meshInstance3D.GetOrCreateOverrideMaterial(i).AlbedoColor = color;
         }
+    }
+
+    public static IStateChange FadeOut(this MeshInstance3D meshInstance3D)
+    {
+        var mat = meshInstance3D.GetOrCreateOverrideMaterial();
+        // Todo: Make some of these options if they ever look bad
+        mat.Transparency = BaseMaterial3D.TransparencyEnum.Alpha;
+        mat.CullMode = BaseMaterial3D.CullModeEnum.Back;
+        mat.DepthDrawMode = BaseMaterial3D.DepthDrawModeEnum.Always;
+        
+        var newColor = new Color(mat.AlbedoColor.R, mat.AlbedoColor.G, mat.AlbedoColor.B, 0);
+        return new PropertyStateChange(mat, "albedo_color", newColor);
+
+        // return new PropertyStateChange(meshInstance3D, "transparency", 1);
     }
 }
