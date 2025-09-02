@@ -58,6 +58,17 @@ public class CompositeStateChange : IStateChange
         return composite;
     }
     
+    public static CompositeStateChange ParallelWithDelays(IStateChange[] stateChanges, float delay)
+    {
+        var composite = new CompositeStateChange();
+        foreach (var change in stateChanges)
+        {
+            composite.AddStateChangeInParallel(change, delay);
+        }
+    
+        return composite;
+    }
+    
     // Sequential add - starts after the last registered change
     public void AddStateChangeWithDelay(IStateChange change, double delay = 0, bool log = false)
     {

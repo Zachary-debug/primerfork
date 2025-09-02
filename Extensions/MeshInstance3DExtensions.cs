@@ -57,4 +57,12 @@ public static class MeshInstance3DExtensions
 
         // return new PropertyStateChange(meshInstance3D, "transparency", 1);
     }
+    
+    public static IStateChange FadeIn(this MeshInstance3D meshInstance3D)
+    {
+        var mat = meshInstance3D.GetOrCreateOverrideMaterial();
+        
+        var newColor = new Color(mat.AlbedoColor.R, mat.AlbedoColor.G, mat.AlbedoColor.B, 1);
+        return new PropertyStateChange(mat, "albedo_color", newColor);
+    }
 }

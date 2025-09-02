@@ -1,4 +1,5 @@
 ﻿using Godot;
+using PrimerTools;
 
 [Tool]
 public partial class ImageDisplayMesh : MeshInstance3D
@@ -42,7 +43,7 @@ public partial class ImageDisplayMesh : MeshInstance3D
         // Create a new material and set the image texture
         var material = new StandardMaterial3D();
         material.AlbedoTexture = ImageTexture;
-        material.CullMode = BaseMaterial3D.CullModeEnum.Disabled;
+        // material.CullMode = BaseMaterial3D.CullModeEnum.Disabled;
 
         // Assign the material to the mesh surface
         SetSurfaceOverrideMaterial(0, material);
@@ -50,13 +51,13 @@ public partial class ImageDisplayMesh : MeshInstance3D
 
     public void AllowTransparency()
     {
-        var mat = (StandardMaterial3D)GetSurfaceOverrideMaterial(0);
+        var mat = this.GetOrCreateOverrideMaterial();
         mat.Transparency = BaseMaterial3D.TransparencyEnum.Alpha;
     }
 
     public void MakeUnshaded()
     {
-        var mat = (StandardMaterial3D)GetSurfaceOverrideMaterial(0);
+        var mat = this.GetOrCreateOverrideMaterial();
         mat.ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded;
     }
 }
