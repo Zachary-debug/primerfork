@@ -90,6 +90,22 @@ public partial class PatronManager
         }
     }
     
+    private string inclusionsPath = "res://addons/PrimerAssets/Patreon/inclusions.txt";
+    private HashSet<string> _includedPatrons;
+    private bool _inclusionListLoaded = false;
+
+    public IReadOnlySet<string> IncludedPatrons
+    {
+        get
+        {
+            if (!_inclusionListLoaded)
+            {
+                LoadInclusionList();
+            }
+            return _includedPatrons;
+        }
+    }
+    
     private string substitutionsPath = "res://addons/PrimerAssets/Patreon/substitutions.txt";
     private Dictionary<string, string> _nameSubstitutions;
     private bool _substitutionsLoaded = false;
@@ -111,13 +127,58 @@ public partial class PatronManager
         LoadPatronsFromCSV();
         ApplyNameSubstitutions();
         
-        return patrons
+        // Get patrons from public thanks tiers
+        var eligiblePatrons = patrons
             .Where(x => publicThanksTiers.Contains(x.Tier))
-            // Manually including patrons from inclusions.txt should happen at this point in the logic
+            .ToList();
+        
+        // Manually include patrons from inclusions.txt
+        var manuallyIncludedPatrons = patrons
+            .Where(IsIncluded)
+            .ToList();
+
+        foreach (var p in manuallyIncludedPatrons)
+        {
+            GD.Print(p.Name);
+        }
+        
+        // Combine both lists
+        eligiblePatrons.AddRange(manuallyIncludedPatrons);
+        
+        // Apply remaining filters to the combined list
+        return eligiblePatrons
             .Where(x => x.LastChargeDate > lastVideoDate)
             .Where(x => !IsExcluded(x))
             .Select(x => x.Name)
+            .Distinct() // Ensure no duplicates
             .ToList();
+    }
+    
+    private void LoadInclusionList()
+    {
+        _includedPatrons = new HashSet<string>();
+    
+        if (FileAccess.FileExists(inclusionsPath))
+        {
+            using var file = FileAccess.Open(inclusionsPath, FileAccess.ModeFlags.Read);
+            while (!file.EofReached())
+            {
+                string line = file.GetLine().Trim();
+                if (!string.IsNullOrWhiteSpace(line))
+                {
+                    _includedPatrons.Add(line.ToLower());
+                }
+            }
+            GD.Print($"Loaded {_includedPatrons.Count} manually included patrons");
+        }
+        else
+        {
+            GD.Print("No inclusion file found, using empty inclusion list");
+        }
+    
+        _inclusionListLoaded = true;
+
+        GetUnmatchedInclusions();
     }
     
     private void LoadExclusionList()
@@ -198,6 +259,7 @@ public partial class PatronManager
     
         _substitutionsLoaded = true;
     }
+    
     private void CheckUnmatchedSubstitutions()
     {
         var patronNames = new HashSet<string>(patrons.Select(p => p.Name), StringComparer.OrdinalIgnoreCase);
@@ -212,6 +274,7 @@ public partial class PatronManager
             }
         }
     }
+    
     public void ApplyNameSubstitutions()
     {
         if (!_substitutionsLoaded)
@@ -413,12 +476,54 @@ public partial class PatronManager
     }
     #endregion
     
+    public bool IsIncluded(Patron patron)
+    {
+        // Check if patron is manually included (by name, email, or discord)
+        return IncludedPatrons.Contains(patron.Name?.ToLower()) || 
+               IncludedPatrons.Contains(patron.Email?.ToLower()) ||
+               IncludedPatrons.Contains(patron.Discord?.ToLower());
+    }
+    
     public bool IsExcluded(Patron patron)
     {
         // Check if patron requested exclusion (by name or email)
         return ExcludedPatrons.Contains(patron.Name?.ToLower()) || 
                ExcludedPatrons.Contains(patron.Email?.ToLower()) ||
                ExcludedPatrons.Contains(patron.Discord?.ToLower());
+    }
+    
+    // Get list of all included names that weren't found in the patron list
+    public void GetUnmatchedInclusions()
+    {
+        var unmatched = new List<string>();
+        
+        var patronIdentifiers = new HashSet<string>();
+        foreach (var p in patrons)
+        {
+            if (!string.IsNullOrWhiteSpace(p.Name))
+                patronIdentifiers.Add(p.Name.ToLower());
+            if (!string.IsNullOrWhiteSpace(p.Email))
+                patronIdentifiers.Add(p.Email.ToLower());
+            if (!string.IsNullOrWhiteSpace(p.Discord))
+                patronIdentifiers.Add(p.Discord.ToLower());
+        }
+        
+        foreach (var included in IncludedPatrons)
+        {
+            if (!patronIdentifiers.Contains(included))
+            {
+                unmatched.Add(included);
+            }
+        }
+
+        if (unmatched.Count > 0)
+        {
+            GD.PushWarning("Unmatched inclusions found:");
+            foreach (var inclusion in unmatched)
+            {
+                GD.Print($"'{inclusion}' not found in patron data");
+            }
+        }
     }
     
     // Get list of all excluded names that weren't found in the patron list
@@ -447,10 +552,10 @@ public partial class PatronManager
 
         if (unmatched.Count > 0)
         {
-            GD.PushWarning("Unmatched exclusions found.");
+            GD.PushWarning("Unmatched exclusions found:");
             foreach (var exclusion in unmatched)
             {
-                GD.Print($"{exclusion} not found in patron data.");
+                GD.Print($"'{exclusion}' not found in patron data");
             }
         }
     }
