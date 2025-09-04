@@ -12,6 +12,7 @@ public partial class ImageDisplayMesh : MeshInstance3D
         get => imageTexture;
         set
         {
+            if (value == null) return;
             imageTexture = value;
             size = new Vector2(value.GetWidth(), value.GetHeight());
             Update();

@@ -18,7 +18,9 @@ public partial class StateChangeSequencePlayerController : Control
     
     private Button _hideButton;
     private bool _hidden = false;
-
+    private Button _slowButton; 
+    private bool _slow = false;
+    
     public override void _Ready()
     {
         _stateChangeSequencePlayer = GetParent().GetChildren()
@@ -39,6 +41,9 @@ public partial class StateChangeSequencePlayerController : Control
                 GD.PrintErr("Apparently, IsNodeReady can be true before Ready has been called on the node.");
             }
         }
+        
+        _slowButton = GetNode<Button>("%SlowButton");
+        _slowButton.Pressed += OnSlowButtonPressed;
         
         _hideButton = GetNode<Button>("%HideButton");
         _hideButton.Pressed += OnHideButtonPressed;
@@ -108,6 +113,13 @@ public partial class StateChangeSequencePlayerController : Control
 
         // Update playback speed if supported (you'd need to add this to TweenSequence)
         _stateChangeSequencePlayer.PlaybackSpeed = _playbackSpeedSpinBox.Value;
+    }
+    
+    private void OnSlowButtonPressed()
+    {
+        _slow = !_slow;
+        Engine.TimeScale = _slow ? 0.1 : 1;
+        _slowButton.Text = _slow ? "Make fast" : "Make slow";
     }
 
     private void OnHideButtonPressed()
