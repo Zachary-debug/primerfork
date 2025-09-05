@@ -69,6 +69,7 @@ public partial class PatronManager
         "Gigablob",
         "Public Thanks",
         "Personal phone call",
+        "On-screen thanks"
     };
     
     public List<Patron> patrons = new List<Patron>();
@@ -136,14 +137,11 @@ public partial class PatronManager
         var manuallyIncludedPatrons = patrons
             .Where(IsIncluded)
             .ToList();
-
-        foreach (var p in manuallyIncludedPatrons)
-        {
-            GD.Print(p.Name);
-        }
         
         // Combine both lists
         eligiblePatrons.AddRange(manuallyIncludedPatrons);
+        
+        eligiblePatrons.Sort((x, y) => String.Compare(x.Name, y.Name));
         
         // Apply remaining filters to the combined list
         return eligiblePatrons
