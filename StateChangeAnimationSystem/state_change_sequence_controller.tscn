@@ -52,10 +52,20 @@ layout_mode = 2
 [node name="Play_Reset" type="HBoxContainer" parent="VBoxContainer/MarginContainer/ControlsContainer"]
 layout_mode = 2
 
+[node name="Back 5" type="Button" parent="VBoxContainer/MarginContainer/ControlsContainer/Play_Reset"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Back 5"
+
 [node name="Play" type="Button" parent="VBoxContainer/MarginContainer/ControlsContainer/Play_Reset"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Play"
+
+[node name="Forward 5" type="Button" parent="VBoxContainer/MarginContainer/ControlsContainer/Play_Reset"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Forward 5"
 
 [node name="Reset" type="Button" parent="VBoxContainer/MarginContainer/ControlsContainer/Play_Reset"]
 unique_name_in_owner = true

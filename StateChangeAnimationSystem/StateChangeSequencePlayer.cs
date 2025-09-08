@@ -45,13 +45,12 @@ public partial class StateChangeSequencePlayer : Node
     private readonly CompositeStateChange _rootComposite = new();
     private List<FlattenedAnimation> _flattenedAnimations;
     private double _currentTime = 0;
-    private bool _isPlaying = false;
-
-    public double LastStateChangeTime => _rootComposite.CurrentEndTime;
-    
-    public bool IsPlaying => _isPlaying;
     public double CurrentTime => _currentTime;
+    
+    private bool _isPlaying = false;
+    public bool IsPlaying => _isPlaying;
     public double TotalDuration => _rootComposite.Duration;
+    public double LastStateChangeTime => _rootComposite.CurrentEndTime;
     
     [Export] private double _playbackSpeed = 1.0;
     public double PlaybackSpeed

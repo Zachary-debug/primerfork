@@ -5,6 +5,8 @@ using PrimerTools;
 public partial class StateChangeSequencePlayerController : Control
 {
     private StateChangeSequencePlayer _stateChangeSequencePlayer;
+    private Button _back5Button;
+    private Button _forward5Button;
     private Button _playPauseButton;
     private Label _timeDisplay;
     private HSlider _timelineSlider;
@@ -47,6 +49,12 @@ public partial class StateChangeSequencePlayerController : Control
         
         _hideButton = GetNode<Button>("%HideButton");
         _hideButton.Pressed += OnHideButtonPressed;
+        
+        _back5Button = GetNode<Button>("%Back 5");
+        _back5Button.Pressed += OnBack5Pressed;
+        
+        _forward5Button = GetNode<Button>("%Forward 5");
+        _forward5Button.Pressed += OnForward5Pressed;
         
         _playPauseButton = GetNode<Button>("%Play");
         _playPauseButton.Pressed += OnPlayPausePressed;
@@ -150,6 +158,18 @@ public partial class StateChangeSequencePlayerController : Control
             _stateChangeSequencePlayer.Pause();
         else
             _stateChangeSequencePlayer.Resume();
+    }
+
+    private void OnBack5Pressed()
+    {
+        var destinationTime = Mathf.Max(0, _stateChangeSequencePlayer.CurrentTime - 5);
+        _stateChangeSequencePlayer.SeekTo(destinationTime);
+    }
+    
+    private void OnForward5Pressed()
+    {
+        var destinationTime = Mathf.Min(_stateChangeSequencePlayer.TotalDuration, _stateChangeSequencePlayer.CurrentTime + 5);
+        _stateChangeSequencePlayer.SeekTo(destinationTime);
     }
 
     private void OnResetPressed()
