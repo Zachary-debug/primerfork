@@ -125,7 +125,8 @@ public class PropertyStateChange : IAnimatedStateChange
             Variant.Type.Vector2 => Tween.InterpolateValue(start.AsVector2(), _endValue.AsVector2() - start.AsVector2(), elapsedTime, duration, _transition, _ease),
             Variant.Type.Vector3 => Tween.InterpolateValue(start.AsVector3(), _endValue.AsVector3() - start.AsVector3(), elapsedTime, duration, _transition, _ease),
             Variant.Type.Color => Tween.InterpolateValue(start.AsColor(), _endValue.AsColor() - start.AsColor(), elapsedTime, duration, _transition, _ease),
-            Variant.Type.Quaternion => start.AsQuaternion().Slerp(_endValue.AsQuaternion(), (float)(elapsedTime / duration)), // _transition, _ease // No transition or ease here for now
+            Variant.Type.Quaternion => Tween.InterpolateValue(start.AsQuaternion(), start.AsQuaternion().Inverse() *_endValue.AsQuaternion(), elapsedTime, duration, _transition, _ease),
+            // Variant.Type.Quaternion => start.AsQuaternion().Slerp(_endValue.AsQuaternion(), (float)(elapsedTime / duration)), // _transition, _ease // No transition or ease here for now
             _ => end // For non-interpolatable types, just use end value
         };
     }
