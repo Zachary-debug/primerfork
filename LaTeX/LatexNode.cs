@@ -243,6 +243,30 @@ public partial class LatexNode : Node3D
 		}
 	}
 
+	public CompositeStateChange ChangeColor(Color color, int beginIndex = 0, int endIndex = -1)
+	{
+		MakeMaterialUnique();
+
+		var characters = GetCharacters();
+		if (endIndex == -1)
+		{
+			endIndex = characters.Count;
+		}
+
+		var stateChanges = new List<IStateChange>();
+		foreach (var character in characters.Take(new System.Range(beginIndex, endIndex)))
+		{
+			stateChanges.Add(
+				new PropertyStateChange(
+					((StandardMaterial3D)((MeshInstance3D)character).Mesh.SurfaceGetMaterial(0)),
+					"albedo_color",
+					color
+				)
+			);
+		}
+		return CompositeStateChange.Parallel(stateChanges.ToArray());
+	}
+
 	private bool _materialsAreUnique = false;
 	private void MakeMaterialUnique()
 	{
@@ -310,7 +334,23 @@ public partial class LatexNode : Node3D
 			stateChanges[i] = container.ScaleTo(1);
 			i++;
 		}
-		return CompositeStateChange.Parallel(stateChanges);
+		return CompositeStateChange.Parallel(stateChanges.ToArray());
+	}
+	
+	public CompositeStateChange Disappear()
+	{
+		var containers = GetCharacterContainers();
+		var stateChanges = new IStateChange[containers.Count];
+
+		// Since midline centering is now done in UpdateCharacters,
+		// we just need to scale the containers from zero
+		var i = 0;
+		foreach (var container in containers)
+		{
+			stateChanges[i] = container.ScaleTo(0);
+			i++;
+		}
+		return CompositeStateChange.Parallel(stateChanges.ToArray());
 	}
 	
 	// This is a hack to work around a strange feature of state changes.

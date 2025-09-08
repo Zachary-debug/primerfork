@@ -303,7 +303,7 @@ public partial class LatexAnimator : Node3D
         }
         if (movementPhase.Duration > 0) // Only add if there are movements
         {
-            composite.AddStateChangeWithDelay(movementPhase);
+            composite.AddStateChange(movementPhase.WithDuration(Node3DStateChangeExtensions.DefaultDuration / 2)); // Idk, make them a bit quicker
         }
         
         // Appearance phase
@@ -315,14 +315,14 @@ public partial class LatexAnimator : Node3D
         }
         if (appearancePhase.Duration > 0) // Only add if there are appearances
         {
-            composite.AddStateChangeWithDelay(appearancePhase);
+            composite.AddStateChange(appearancePhase);
         }
         
         // Final swap to new expression
         var finalSwap = new CompositeStateChange().WithName("Final Swap");
-        finalSwap.AddStateChangeWithDelay(new PropertyStateChange(_latexNodes[newIndex], "visible", true).WithDuration(0.001));
+        finalSwap.AddStateChange(new PropertyStateChange(_latexNodes[newIndex], "visible", true).WithDuration(0.001));
         finalSwap.AddStateChangeInParallel(new PropertyStateChange(intermediateNode, "visible", false).WithDuration(0.001));
-        composite.AddStateChangeWithDelay(finalSwap);
+        composite.AddStateChange(finalSwap);
 
         _currentExpressionIndex = newIndex;
 

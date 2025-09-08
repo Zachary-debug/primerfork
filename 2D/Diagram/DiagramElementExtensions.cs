@@ -212,8 +212,8 @@ public static class DiagramElementExtensions
         );
         
         appearanceStateChange.AddStateChangeInParallel(
-            new PropertyStateChange(element, "HeadLength", 0).WithDuration(duration),
-            delay: duration / 2
+            new PropertyStateChange(element, "HeadLength", 0).WithDuration(duration)
+            // delay: duration / 2
         );
         
         appearanceStateChange.AddStateChangeInParallel(
