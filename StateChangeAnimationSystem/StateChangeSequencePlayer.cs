@@ -59,10 +59,6 @@ public partial class StateChangeSequencePlayer : Node
         set
         {
             _playbackSpeed = Mathf.Max(0.0, value);
-            if (_audioPlayer != null)
-            {
-                _audioPlayer.PitchScale = (float)_playbackSpeed;
-            }
         }
     }
     
@@ -74,7 +70,6 @@ public partial class StateChangeSequencePlayer : Node
             _audioPlayer = new AudioStreamPlayer();
             AddChild(_audioPlayer);
             _audioPlayer.Stream = _audioTrack;
-            _audioPlayer.PitchScale = (float)_playbackSpeed;
             _audioPlayer.VolumeDb = _volumeDb;
         }
         

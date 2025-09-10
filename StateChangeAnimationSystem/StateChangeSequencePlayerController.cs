@@ -159,7 +159,6 @@ public partial class StateChangeSequencePlayerController : Control
         else
             _stateChangeSequencePlayer.Resume();
     }
-
     private void OnBack5Pressed()
     {
         var destinationTime = Mathf.Max(0, _stateChangeSequencePlayer.CurrentTime - 5);
