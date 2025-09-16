@@ -348,9 +348,13 @@ public partial class ShaderArrow : Node3D
 
     public CompositeStateChange TransitionHeadAndTail(Vector3 headPosition, Vector3 tailPosition)
     {
-        return CompositeStateChange.Parallel(
+        var stateChange = CompositeStateChange.Parallel(
             new PropertyStateChange(this, "EndPosition", headPosition),
             new PropertyStateChange(this, "StartPosition", tailPosition)
         );
+        EndPosition = headPosition;
+        StartPosition = tailPosition;
+
+        return stateChange;
     }
 }

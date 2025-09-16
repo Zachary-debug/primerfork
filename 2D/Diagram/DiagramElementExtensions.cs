@@ -44,6 +44,8 @@ public static class DiagramElementExtensions
                     new PropertyStateChange(arrowData, "HeadLength", originalHeadLength).WithDuration(duration),
                     delay: duration / 2
                 );
+
+                arrowData.End = originalEnd;
                 break;
             case RectangleData rectData:
                 var originalSize = rectData.Size;
@@ -79,7 +81,11 @@ public static class DiagramElementExtensions
                     new PropertyStateChange(arrowData, "HeadLength", 0).WithDuration(duration),
                     delay: duration / 2
                 );
-                
+                break;
+            case RectangleData rectangleData:
+                appearanceStateChange.AddStateChangeWithDelay(
+                    new PropertyStateChange(rectangleData, "Size", Vector2.Zero).WithDuration(duration)
+                );
                 break;
             default:
                 GD.Print($"Appearance not implemented for shape type {element.ShapeData.GetType()}");
@@ -88,7 +94,7 @@ public static class DiagramElementExtensions
         
         appearanceStateChange.AddStateChangeInParallel(
             new PropertyStateChange(element.Style, "Thickness", 0).WithDuration(duration),
-            delay: duration / 2
+            delay: duration / 4
         );
         
         appearanceStateChange.AddStateChangeInParallel(

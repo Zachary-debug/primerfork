@@ -25,6 +25,11 @@ public partial class SurfacePlot : MeshInstance3D, IPrimerGraphData
     
     public void SetColor(Color color)
     {
+        if (color.A < 1)
+        {
+            Material.Transparency = BaseMaterial3D.TransparencyEnum.Alpha;
+        }
+        
         Material.AlbedoColor = color;
     }
     #endregion
@@ -34,7 +39,7 @@ public partial class SurfacePlot : MeshInstance3D, IPrimerGraphData
     private float _stateProgress = 0f;
     
     public enum SweepMode { XAxis, ZAxis, Radial, Diagonal }
-    private SweepMode _currentSweepMode = SweepMode.XAxis;
+    // private SweepMode _currentSweepMode = SweepMode.XAxis;
     
     [Export] public float StateProgress
     {
@@ -116,20 +121,16 @@ public partial class SurfacePlot : MeshInstance3D, IPrimerGraphData
         return TransitionAppear(duration);
     }
     
-    public IStateChange TransitionAppear(double duration = Node3DStateChangeExtensions.DefaultDuration, SweepMode mode = SweepMode.XAxis)
+    public IStateChange TransitionAppear(double duration = Node3DStateChangeExtensions.DefaultDuration)
     {
-        if (_surfaceStates.Count == 0) return null;
-        
-        _currentSweepMode = mode;
-        StateProgress = 0;
-        
-        return new PropertyStateChange(this, "StateProgress", 1f)
-            .WithDuration(duration);
+        return TransitionToNextState(duration);
     }
     
     public IStateChange TransitionToNextState(double duration = Node3DStateChangeExtensions.DefaultDuration)
     {
         if (_surfaceStates.Count == 0) return null;
+        
+        GD.Print($"{Name} Transitioning from state {StateProgress} to state {_surfaceStates.Count}");
         
         // Don't go beyond the last state
         // if (targetProgress > _surfaceStates.Count - 1)
@@ -202,18 +203,78 @@ public partial class SurfacePlot : MeshInstance3D, IPrimerGraphData
         var depth = data.GetLength(1);
         
         // Calculate visible width based on progress
-        var visibleWidth = Mathf.Max(1, (int)(width * progress));
+        var visibleWidth = (int)(width * progress);
         var edgeFraction = (width * progress) % 1;
+
+        // We need at least 2 columns to create triangles
+        if (visibleWidth < 2)
+        {
+            if (visibleWidth == 1 || edgeFraction > 0)
+            {
+                // Show a very thin slice using first two columns
+                visibleWidth = 2;
+                edgeFraction = 0;
+                // Scale the second column to be very close to the first
+                var scaleFactor = (width * progress) / 2.0f;
+                
+                // Create vertices with interpolation
+                var vertices = new List<Vector3>();
+                for (var x = 0; x < 2; x++)
+                {
+                    for (var z = 0; z < depth; z++)
+                    {
+                        if (x == 0)
+                        {
+                            vertices.Add(TransformPointFromDataSpaceToPositionSpace(data[0, z]));
+                        }
+                        else
+                        {
+                            // Interpolate between first and second column based on progress
+                            var point = data[0, z].Lerp(data[1, z], scaleFactor);
+                            vertices.Add(TransformPointFromDataSpaceToPositionSpace(point));
+                        }
+                    }
+                }
+                
+                // Now create triangles with these 2 columns
+                var indices = new List<int>();
+                for (var z = 0; z < depth - 1; z++)
+                {
+                    var topLeft = z;
+                    var topRight = topLeft + 1;
+                    var bottomLeft = depth + z;
+                    var bottomRight = bottomLeft + 1;
+                    
+                    indices.Add(topLeft);
+                    indices.Add(bottomLeft);
+                    indices.Add(bottomRight);
+                    
+                    indices.Add(topLeft);
+                    indices.Add(bottomRight);
+                    indices.Add(topRight);
+                }
+                
+                BuildMeshFromVerticesAndIndices(vertices, indices);
+                return;
+            }
+            else
+            {
+                // Progress is too small to show anything
+                Mesh = new ArrayMesh();
+                return;
+            }
+        }
         
-        var vertices = new List<Vector3>();
-        var indices = new List<int>();
+        // Rest of the original method for visibleWidth >= 2
+        var vertices2 = new List<Vector3>();
+        var indices2 = new List<int>();
         
         // Create vertices up to visible width
         for (var x = 0; x < visibleWidth; x++)
         {
             for (var z = 0; z < depth; z++)
             {
-                vertices.Add(TransformPointFromDataSpaceToPositionSpace(data[x, z]));
+                vertices2.Add(TransformPointFromDataSpaceToPositionSpace(data[x, z]));
             }
         }
         
@@ -225,7 +286,7 @@ public partial class SurfacePlot : MeshInstance3D, IPrimerGraphData
                 var currentPoint = data[visibleWidth - 1, z];
                 var nextPoint = data[visibleWidth, z];
                 var interpolatedPoint = currentPoint.Lerp(nextPoint, edgeFraction);
-                vertices.Add(TransformPointFromDataSpaceToPositionSpace(interpolatedPoint));
+                vertices2.Add(TransformPointFromDataSpaceToPositionSpace(interpolatedPoint));
             }
         }
         
@@ -240,32 +301,17 @@ public partial class SurfacePlot : MeshInstance3D, IPrimerGraphData
                 var bottomLeft = (x + 1) * depth + z;
                 var bottomRight = bottomLeft + 1;
                 
-                indices.Add(topLeft);
-                indices.Add(bottomLeft);
-                indices.Add(bottomRight);
+                indices2.Add(topLeft);
+                indices2.Add(bottomLeft);
+                indices2.Add(bottomRight);
                 
-                indices.Add(topLeft);
-                indices.Add(bottomRight);
-                indices.Add(topRight);
+                indices2.Add(topLeft);
+                indices2.Add(bottomRight);
+                indices2.Add(topRight);
             }
         }
         
-        // Create the mesh
-        var arrayMesh = new ArrayMesh();
-        var arrays = new Godot.Collections.Array();
-        arrays.Resize((int)Mesh.ArrayType.Max);
-        
-        var normals = CalculateNormals(vertices, indices);
-        var vertexArray = vertices.ToArray();
-        var indexArray = indices.ToArray();
-        MeshUtilities.MakeDoubleSided(ref vertexArray, ref indexArray, ref normals);
-        arrays[(int)Mesh.ArrayType.Vertex] = vertexArray;
-        arrays[(int)Mesh.ArrayType.Index] = indexArray;
-        arrays[(int)Mesh.ArrayType.Normal] = normals;
-        
-        arrayMesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-        Mesh = arrayMesh;
-        Mesh.SurfaceSetMaterial(0, Material);
+        BuildMeshFromVerticesAndIndices(vertices2, indices2);
     }
     
     private void CreateInterpolatedMesh(Vector3[,] fromData, Vector3[,] toData, float progress)

@@ -34,7 +34,8 @@ void fragment() {
     float grad_len = length(vec2(d_dx, d_dy));
 
     // Normalize the gradient to get consistent AA width
-    float aa_width = smoothness * max(grad_len, 0.0001);
+    //float aa_width = smoothness * max(grad_len, 0.0001);
+    float aa_width = smoothness * grad_len;
 
     // Apply smoothstep with gradient-based anti-aliasing
     float alpha = 1.0 - smoothstep(0.0, aa_width, d);

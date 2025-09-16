@@ -494,6 +494,8 @@ public partial class Table : Node3D
                 
                 line = CreateHorizontalLine(leftX, rightX, lastY);
                 ((CylinderMesh)line.Mesh).Height = 0;
+                ((CylinderMesh)line.Mesh).TopRadius = 0;
+                ((CylinderMesh)line.Mesh).BottomRadius = 0;
             }
             else
             {
@@ -517,6 +519,12 @@ public partial class Table : Node3D
                 composite.AddStateChangeInParallel(
                     new PropertyStateChange((CylinderMesh)line.Mesh, "height", rightX - leftX).WithDuration(duration)
                 );
+                composite.AddStateChangeInParallel(
+                    new PropertyStateChange((CylinderMesh)line.Mesh, "top_radius", GridLineThickness / 2f).WithDuration(0)
+                );
+                composite.AddStateChangeInParallel(
+                    new PropertyStateChange((CylinderMesh)line.Mesh, "bottom_radius", GridLineThickness / 2f).WithDuration(0)
+                );
             }
         }
         
@@ -538,6 +546,8 @@ public partial class Table : Node3D
                 
                 line = CreateVerticalLine(lastX, topY, bottomY);
                 ((CylinderMesh)line.Mesh).Height = 0;
+                ((CylinderMesh)line.Mesh).TopRadius = 0;
+                ((CylinderMesh)line.Mesh).BottomRadius = 0;
             }
             else
             {
@@ -560,6 +570,12 @@ public partial class Table : Node3D
             {
                 composite.AddStateChangeInParallel(
                     new PropertyStateChange((CylinderMesh)line.Mesh, "height", topY - bottomY).WithDuration(duration)
+                );
+                composite.AddStateChangeInParallel(
+                    new PropertyStateChange((CylinderMesh)line.Mesh, "top_radius", GridLineThickness / 2f).WithDuration(0)
+                );
+                composite.AddStateChangeInParallel(
+                    new PropertyStateChange((CylinderMesh)line.Mesh, "bottom_radius", GridLineThickness / 2f).WithDuration(0)
                 );
             }
         }
