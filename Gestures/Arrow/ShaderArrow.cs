@@ -352,8 +352,8 @@ public partial class ShaderArrow : Node3D
             new PropertyStateChange(this, "EndPosition", headPosition),
             new PropertyStateChange(this, "StartPosition", tailPosition)
         );
-        EndPosition = headPosition;
-        StartPosition = tailPosition;
+        // EndPosition = headPosition;
+        // StartPosition = tailPosition;
 
         return stateChange;
     }

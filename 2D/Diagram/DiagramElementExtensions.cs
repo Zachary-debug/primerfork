@@ -10,6 +10,13 @@ public static class DiagramElementExtensions
         var originalThickness = element.Style.Thickness;
         element.Style.Thickness = 0;
         var appearanceStateChange = new CompositeStateChange();
+
+        element.Visible = false;
+        
+        appearanceStateChange.AddStateChangeWithDelay(
+            new PropertyStateChange(element, "visible", true).WithDuration(0)
+        );
+        
         appearanceStateChange.AddStateChangeWithDelay(
             new PropertyStateChange(element.Style, "Thickness", originalThickness).WithDuration(duration)
         );
@@ -45,7 +52,7 @@ public static class DiagramElementExtensions
                     delay: duration / 2
                 );
 
-                arrowData.End = originalEnd;
+                // arrowData.End = originalEnd;
                 break;
             case RectangleData rectData:
                 var originalSize = rectData.Size;
@@ -99,6 +106,10 @@ public static class DiagramElementExtensions
         
         appearanceStateChange.AddStateChangeInParallel(
             new PropertyStateChange(element.Style, "Smoothness", 0).WithDuration(duration)
+        );
+        appearanceStateChange.AddStateChangeWithDelay(
+            new PropertyStateChange(element, "visible", false).WithDuration(0),
+            delay: duration
         );
 
         return appearanceStateChange;
