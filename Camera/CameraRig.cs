@@ -70,14 +70,10 @@ public partial class CameraRig : Node3D
     private bool _isRotating = false;
     private bool _isPanning = false;
     private Vector2 _lastMousePosition;
-    public override void _Ready()
-    {
-        base._Ready();
-        SetProcessUnhandledInput(true);
-    }
     
     public override void _UnhandledInput(InputEvent @event)
     {
+        if (SceneRecorder.IsOn) return;
         if (!Camera.Current) return;
         if (@event is InputEventMouseButton mouseButtonEvent)
         {

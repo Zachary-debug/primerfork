@@ -65,7 +65,7 @@ public partial class StateChangeSequencePlayer : Node
     public override void _Ready()
     {
         // Set up audio player if audio track is provided
-        if (_audioTrack != null)
+        if (_audioTrack != null && !SceneRecorder.IsOn)
         {
             _audioPlayer = new AudioStreamPlayer();
             AddChild(_audioPlayer);
@@ -96,6 +96,10 @@ public partial class StateChangeSequencePlayer : Node
 
         if (StartTimeInSeconds < 0) _startFromSeconds = TotalDuration;
         SeekTo(StartTimeInSeconds);
+        
+        var skyMaterial = (ShaderMaterial)GetNode<WorldEnvironment>("../Boilerplate/WorldEnvironment").Environment.Sky.SkyMaterial;
+        skyMaterial.SetShaderParameter("time_offset", StartTimeInSeconds);
+        // skyMaterial.SetShaderParameter("mist_color", new Vector3(1, 0, 0));
         
         if (StartTimeInSeconds < TotalDuration && _playbackSpeed > 0)
         {

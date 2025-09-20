@@ -1,5 +1,7 @@
 shader_type sky;
 
+uniform float time_offset = 0.0;
+
 // Base colors
 uniform vec3 base_color : source_color = vec3(0.184, 0.2, 0.212);
 uniform vec3 mist_color : source_color = vec3(0.184, 0.2, 0.212);
@@ -386,13 +388,12 @@ mat3 rotationMatrix(float angle) {
 }
 
 void sky() {
+	float adjusted_time = TIME + time_offset;
+
 	if (AT_CUBEMAP_PASS) {
 		COLOR = lighting_color;
 	}
 	else {
-
-
-
 	    vec3 dir = normalize(EYEDIR);
 	    vec3 scaled_dir = dir * mist_scale;
 
@@ -405,22 +406,22 @@ void sky() {
 
 	    // Apply rotation if enabled
 	    if (use_rotation == 1) {
-	        mat3 rot = rotationMatrix(TIME * rotation_speed);
+	        mat3 rot = rotationMatrix(adjusted_time * rotation_speed);
 	        scaled_dir = rot * scaled_dir;
 	    }
 
 	    // Domain warping
 	    if (domain_warp_strength > 0.0) {
 	        vec3 warp1 = vec3(perlinNoise(scaled_dir * 2.0));
-	        vec3 warp2 = vec3(perlinNoise(scaled_dir * 4.0 + vec3(TIME * 0.1)));
+	        vec3 warp2 = vec3(perlinNoise(scaled_dir * 4.0 + vec3(adjusted_time * 0.1)));
 	        scaled_dir += (warp1 * 0.3 + warp2 * 0.15) * domain_warp_strength;
 	    }
 
 	    // Animate by adding time-based offsets
-	    //vec3 flow1 = scaled_dir * TIME * mist_speed;
-		vec3 flow1 = scaled_dir + vec3(1.0, 1.0, 1.0) * TIME * mist_speed;
-	    vec3 flow2 = scaled_dir * 1.5 + vec3(0.0, TIME * mist_speed * 1.4, TIME * mist_speed * 0.6);
-	    vec3 flow3 = scaled_dir * 0.7 + vec3(TIME * mist_speed * 0.6, TIME * mist_speed * 1.0, 0.0);
+	    //vec3 flow1 = scaled_dir * adjusted_time * mist_speed;
+		vec3 flow1 = scaled_dir + vec3(1.0, 1.0, 1.0) * adjusted_time * mist_speed;
+	    vec3 flow2 = scaled_dir * 1.5 + vec3(0.0, adjusted_time * mist_speed * 1.4, adjusted_time * mist_speed * 0.6);
+	    vec3 flow3 = scaled_dir * 0.7 + vec3(adjusted_time * mist_speed * 0.6, adjusted_time * mist_speed * 1.0, 0.0);
 
 	    // Apply curl noise influence
 	    if (curl_influence > 0.0) {
@@ -430,7 +431,7 @@ void sky() {
 	    }
 
 	    // Add subtle distortion
-	    vec3 distort_coords = dir * distortion_scale * mist_scale + vec3(TIME * distortion_speed * 3.0);
+	    vec3 distort_coords = dir * distortion_scale * mist_scale + vec3(adjusted_time * distortion_speed * 3.0);
 	    float distortion = perlinNoise(distort_coords) * 0.1;
 
 	    // Create mist layers with layer-specific noise
