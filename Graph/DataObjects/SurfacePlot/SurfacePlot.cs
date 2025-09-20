@@ -107,6 +107,16 @@ public partial class SurfacePlot : MeshInstance3D, IPrimerGraphData
     
     #endregion
 
+    #region Mesh Management
+    private ArrayMesh _reusableMesh;
+    private Rid _meshRid;
+    private bool _meshInitialized = false;
+    private int _currentWidth;
+    private int _currentDepth;
+    private byte[] _vertexDataBuffer;
+    private byte[] _normalDataBuffer;
+    #endregion
+
     // Implement IPrimerGraphData interface methods
     public Animation Transition(double duration = AnimationUtilities.DefaultDuration)
     {
@@ -173,14 +183,14 @@ public partial class SurfacePlot : MeshInstance3D, IPrimerGraphData
         if (stateIndex >= _surfaceStates.Count - 1)
         {
             // We're at or beyond the last state
-            CreateMeshFromData(_surfaceStates[_surfaceStates.Count - 1]);
+            UpdateMeshVertices(_surfaceStates[_surfaceStates.Count - 1]);
             return;
         }
 
         // If we're exactly on a state (no fractional part), show it
         if (Mathf.IsEqualApprox(transitionProgress, 0f))
         {
-            CreateMeshFromData(_surfaceStates[stateIndex]);
+            UpdateMeshVertices(_surfaceStates[stateIndex]);
             return;
         }
 
@@ -190,6 +200,160 @@ public partial class SurfacePlot : MeshInstance3D, IPrimerGraphData
         CreateInterpolatedMesh(fromState, toState, transitionProgress);
     }
     
+    private void EnsureMeshInitialized(int width, int depth)
+    {
+        if (_meshInitialized && _currentWidth == width && _currentDepth == depth)
+            return;
+        
+        // Create the mesh structure once with fixed topology
+        CreateInitialMesh(width, depth);
+        _meshInitialized = true;
+        _currentWidth = width;
+        _currentDepth = depth;
+    }
+    
+    private void CreateInitialMesh(int width, int depth)
+    {
+        _reusableMesh ??= new ArrayMesh();
+        
+        // Clear any existing surfaces
+        for (int i = _reusableMesh.GetSurfaceCount() - 1; i >= 0; i--)
+            _reusableMesh.ClearSurfaces();
+        
+        var arrays = new Godot.Collections.Array();
+        arrays.Resize((int)Mesh.ArrayType.Max);
+        
+        // Create initial vertices (will be updated later)
+        var vertices = new Vector3[width * depth];
+        var indices = new List<int>();
+        
+        // Create triangles (topology stays constant)
+        for (var x = 0; x < width - 1; x++)
+        {
+            for (var z = 0; z < depth - 1; z++)
+            {
+                var topLeft = x * depth + z;
+                var topRight = topLeft + 1;
+                var bottomLeft = (x + 1) * depth + z;
+                var bottomRight = bottomLeft + 1;
+                
+                indices.Add(topLeft);
+                indices.Add(bottomLeft);
+                indices.Add(bottomRight);
+                
+                indices.Add(topLeft);
+                indices.Add(bottomRight);
+                indices.Add(topRight);
+            }
+        }
+        
+        // Initialize with dummy normals (will be updated)
+        var normals = new Vector3[width * depth];
+        for (int i = 0; i < normals.Length; i++)
+            normals[i] = Vector3.Up;
+        
+        arrays[(int)Mesh.ArrayType.Vertex] = vertices;
+        arrays[(int)Mesh.ArrayType.Index] = indices.ToArray();
+        arrays[(int)Mesh.ArrayType.Normal] = normals;
+        
+        Material.CullMode = BaseMaterial3D.CullModeEnum.Disabled;
+        
+        _reusableMesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+        Mesh = _reusableMesh;
+        Mesh.SurfaceSetMaterial(0, Material);
+        
+        // Cache the RID for direct updates
+        _meshRid = _reusableMesh.GetRid();
+        
+        // Pre-allocate buffers
+        _vertexDataBuffer = new byte[width * depth * 12]; // 3 floats * 4 bytes each
+        _normalDataBuffer = new byte[width * depth * 12]; // 3 floats * 4 bytes each
+    }
+    
+    private void UpdateMeshVertices(Vector3[,] data)
+    {
+        var width = data.GetLength(0);
+        var depth = data.GetLength(1);
+        
+        EnsureMeshInitialized(width, depth);
+        
+        // Pack vertices into byte array
+        var index = 0;
+        for (var x = 0; x < width; x++)
+        {
+            for (var z = 0; z < depth; z++)
+            {
+                var vertex = TransformPointFromDataSpaceToPositionSpace(data[x, z]);
+                BitConverter.GetBytes(vertex.X).CopyTo(_vertexDataBuffer, index);
+                BitConverter.GetBytes(vertex.Y).CopyTo(_vertexDataBuffer, index + 4);
+                BitConverter.GetBytes(vertex.Z).CopyTo(_vertexDataBuffer, index + 8);
+                index += 12;
+            }
+        }
+        
+        // Update vertex positions
+        RenderingServer.MeshSurfaceUpdateVertexRegion(_meshRid, 0, 0, _vertexDataBuffer);
+        
+        // Calculate and update normals
+        UpdateNormals(data);
+    }
+    
+    private void UpdateNormals(Vector3[,] data)
+    {
+        var width = data.GetLength(0);
+        var depth = data.GetLength(1);
+        
+        // Calculate normals based on the grid structure
+        var normals = new Vector3[width * depth];
+        
+        for (var x = 0; x < width; x++)
+        {
+            for (var z = 0; z < depth; z++)
+            {
+                var idx = x * depth + z;
+                var current = TransformPointFromDataSpaceToPositionSpace(data[x, z]);
+                
+                // Calculate normal using neighboring points
+                Vector3 normal = Vector3.Zero;
+                
+                if (x > 0 && x < width - 1 && z > 0 && z < depth - 1)
+                {
+                    // Interior point - use cross product of differences
+                    var left = TransformPointFromDataSpaceToPositionSpace(data[x - 1, z]);
+                    var right = TransformPointFromDataSpaceToPositionSpace(data[x + 1, z]);
+                    var front = TransformPointFromDataSpaceToPositionSpace(data[x, z - 1]);
+                    var back = TransformPointFromDataSpaceToPositionSpace(data[x, z + 1]);
+                    
+                    var dx = right - left;
+                    var dz = back - front;
+                    normal = dz.Cross(dx).Normalized();
+                }
+                else
+                {
+                    // Edge point - use simplified calculation
+                    normal = Vector3.Up;
+                }
+                
+                normals[idx] = normal;
+            }
+        }
+        
+        // Pack normals into byte array
+        var index = 0;
+        for (var i = 0; i < normals.Length; i++)
+        {
+            BitConverter.GetBytes(normals[i].X).CopyTo(_normalDataBuffer, index);
+            BitConverter.GetBytes(normals[i].Y).CopyTo(_normalDataBuffer, index + 4);
+            BitConverter.GetBytes(normals[i].Z).CopyTo(_normalDataBuffer, index + 8);
+            index += 12;
+        }
+        
+        // Update normals (attribute index 1 for normals)
+        RenderingServer.MeshSurfaceUpdateAttributeRegion(_meshRid, 0, 0, _normalDataBuffer);
+    }
+    
+    // TODO: Just use a shader for this
+    // TODO: Honestly, this whole class should use a vertext shader.
     private void CreateSweptMesh(float progress)
     {
         if (_surfaceStates.Count == 0 || progress <= 0)
@@ -319,10 +483,10 @@ public partial class SurfacePlot : MeshInstance3D, IPrimerGraphData
         var width = Math.Min(fromData.GetLength(0), toData.GetLength(0));
         var depth = Math.Min(fromData.GetLength(1), toData.GetLength(1));
         
-        var vertices = new List<Vector3>();
-        var indices = new List<int>();
+        EnsureMeshInitialized(width, depth);
         
-        // Interpolate vertices
+        // Interpolate vertices directly into the buffer
+        var index = 0;
         for (var x = 0; x < width; x++)
         {
             for (var z = 0; z < depth; z++)
@@ -330,31 +494,29 @@ public partial class SurfacePlot : MeshInstance3D, IPrimerGraphData
                 var fromPoint = fromData[x, z];
                 var toPoint = toData[x, z];
                 var interpolatedPoint = fromPoint.Lerp(toPoint, progress);
-                vertices.Add(TransformPointFromDataSpaceToPositionSpace(interpolatedPoint));
+                var vertex = TransformPointFromDataSpaceToPositionSpace(interpolatedPoint);
+                
+                BitConverter.GetBytes(vertex.X).CopyTo(_vertexDataBuffer, index);
+                BitConverter.GetBytes(vertex.Y).CopyTo(_vertexDataBuffer, index + 4);
+                BitConverter.GetBytes(vertex.Z).CopyTo(_vertexDataBuffer, index + 8);
+                index += 12;
             }
         }
         
-        // Create triangles
-        for (var x = 0; x < width - 1; x++)
+        // Update vertex positions
+        RenderingServer.MeshSurfaceUpdateVertexRegion(_meshRid, 0, 0, _vertexDataBuffer);
+        
+        // For interpolated meshes, we could interpolate normals too, but recalculating is more accurate
+        // Create a temporary interpolated data array for normal calculation
+        var interpolatedData = new Vector3[width, depth];
+        for (var x = 0; x < width; x++)
         {
-            for (var z = 0; z < depth - 1; z++)
+            for (var z = 0; z < depth; z++)
             {
-                var topLeft = x * depth + z;
-                var topRight = topLeft + 1;
-                var bottomLeft = (x + 1) * depth + z;
-                var bottomRight = bottomLeft + 1;
-                
-                indices.Add(topLeft);
-                indices.Add(bottomLeft);
-                indices.Add(bottomRight);
-                
-                indices.Add(topLeft);
-                indices.Add(bottomRight);
-                indices.Add(topRight);
+                interpolatedData[x, z] = fromData[x, z].Lerp(toData[x, z], progress);
             }
         }
-        
-        BuildMeshFromVerticesAndIndices(vertices, indices);
+        UpdateNormals(interpolatedData);
     }
 
     public Tween TweenTransition(double duration = AnimationUtilities.DefaultDuration)
@@ -383,73 +545,30 @@ public partial class SurfacePlot : MeshInstance3D, IPrimerGraphData
             return;
         }
         
-        CreateMeshFromData(_surfaceStates[_surfaceStates.Count - 1]);
-    }
-    
-    private void CreateMeshFromData(Vector3[,] data)
-    {
-        if (data == null || data.GetLength(0) == 0 || data.GetLength(1) == 0)
-        {
-            Mesh = new ArrayMesh();
-            return;
-        }
-
-        var width = data.GetLength(0);
-        var depth = data.GetLength(1);
-
-        var vertices = new List<Vector3>();
-        var indices = new List<int>();
-
-        // Create vertices
-        for (var x = 0; x < width; x++)
-        {
-            for (var z = 0; z < depth; z++)
-            {
-                vertices.Add(TransformPointFromDataSpaceToPositionSpace(data[x, z]));
-            }
-        }
-
-        // Create triangles (two per grid cell)
-        for (var x = 0; x < width - 1; x++)
-        {
-            for (var z = 0; z < depth - 1; z++)
-            {
-                var topLeft = x * depth + z;
-                var topRight = topLeft + 1;
-                var bottomLeft = (x + 1) * depth + z;
-                var bottomRight = bottomLeft + 1;
-
-                // First triangle (top-left, bottom-left, bottom-right)
-                indices.Add(topLeft);
-                indices.Add(bottomLeft);
-                indices.Add(bottomRight);
-
-                // Second triangle (top-left, bottom-right, top-right)
-                indices.Add(topLeft);
-                indices.Add(bottomRight);
-                indices.Add(topRight);
-            }
-        }
-
-        BuildMeshFromVerticesAndIndices(vertices, indices);
+        UpdateMeshVertices(_surfaceStates[_surfaceStates.Count - 1]);
     }
     
     private void BuildMeshFromVerticesAndIndices(List<Vector3> vertices, List<int> indices)
     {
-        var arrayMesh = new ArrayMesh();
+        // Initialize once
+        _reusableMesh ??= new ArrayMesh();
+        
+        // Clear existing surfaces
+        for (int i = _reusableMesh.GetSurfaceCount() - 1; i >= 0; i--)
+            _reusableMesh.ClearSurfaces();
+        
         var arrays = new Godot.Collections.Array();
         arrays.Resize((int)Mesh.ArrayType.Max);
         
         var normals = CalculateNormals(vertices, indices);
-        var vertexArray = vertices.ToArray();
-        var indexArray = indices.ToArray();
-        MeshUtilities.MakeDoubleSided(ref vertexArray, ref indexArray, ref normals);
-        arrays[(int)Mesh.ArrayType.Vertex] = vertexArray;
-        arrays[(int)Mesh.ArrayType.Index] = indexArray;
+        arrays[(int)Mesh.ArrayType.Vertex] = vertices.ToArray();
+        arrays[(int)Mesh.ArrayType.Index] = indices.ToArray();
         arrays[(int)Mesh.ArrayType.Normal] = normals;
         
-        arrayMesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-        Mesh = arrayMesh;
+        Material.CullMode = BaseMaterial3D.CullModeEnum.Disabled;
+        
+        _reusableMesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+        Mesh = _reusableMesh;
         Mesh.SurfaceSetMaterial(0, Material);
     }
     

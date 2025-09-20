@@ -21,6 +21,7 @@ public partial class Graph : Node3D
         // }
     }
     
+    // Can probably get rid of this. 
     public static Graph CreateInstance()
     {
         // Make the graph
@@ -84,9 +85,13 @@ public partial class Graph : Node3D
         }
     }
 
-    public Axis XAxis => GetNode<Axis>("X"); 
-    public Axis YAxis => GetNode<Axis>("Y"); 
-    public Axis ZAxis => GetNode<Axis>("Z");
+    private Axis _xAxisCache;
+    private Axis _yAxisCache; 
+    private Axis _zAxisCache;
+
+    public Axis XAxis => _xAxisCache ??= GetNode<Axis>("X");
+    public Axis YAxis => _yAxisCache ??= GetNode<Axis>("Y");
+    public Axis ZAxis => _zAxisCache ??= GetNode<Axis>("Z");
     private List<Axis> Axes => new() { XAxis, YAxis, ZAxis };
 
     public enum AxisLabelAlignmentOptions

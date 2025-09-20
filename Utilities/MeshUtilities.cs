@@ -21,6 +21,8 @@ public static class MeshUtilities
     }
     public static void MakeDoubleSided(ref Vector3[] vertices, ref int[] indices, ref Vector3[] normals)
     {
+        GD.PushWarning("You're making the mesh double sided. It might be better to disable culling on the material or shader.");
+        
         // Prepare arrays to contain vertices and triangles for both sides
         // If doubleSided is false, the empty entries won't matter
         var verticesDouble = new Vector3[vertices.Length * 2];

@@ -307,7 +307,8 @@ public partial class CurvePlot2D : MeshInstance3D, IPrimerGraphData
         var vertexArray = vertices.ToArray();
         var indexArray = indices.ToArray();
         var normalArray = Enumerable.Repeat(Vector3.Back, vertexArray.Length).ToArray();
-        MeshUtilities.MakeDoubleSided(ref vertexArray, ref indexArray, ref normalArray);
+        Material.CullMode = BaseMaterial3D.CullModeEnum.Disabled;
+        // MeshUtilities.MakeDoubleSided(ref vertexArray, ref indexArray, ref normalArray);
 
         var surfaceArray = new Array();
         surfaceArray.Resize((int)Mesh.ArrayType.Max);
