@@ -34,6 +34,7 @@ public partial class SceneRecorder : Node
     [Export] private bool _record;
     public bool IsRecording => _record;
     [Export] private bool _quitWhenFinished;
+    [Export] private bool _transparentBackground;
 
     public enum OutputResolutionOptions { SD, HD, FHD, UHD }
 
@@ -266,6 +267,19 @@ public partial class SceneRecorder : Node
         {
             GetTree().Quit();
             return;
+        }
+
+        if (_transparentBackground)
+        {
+            var vp = TargetViewport ?? GetViewport();
+            vp.TransparentBg = true;
+            RenderingServer.SetDefaultClearColor(new Color(0, 0, 0, 0));
+            var env = vp.GetWorld3D()?.Environment;
+            if (env != null) {
+                env.BackgroundMode = Godot.Environment.BGMode.Color;
+                env.BackgroundColor = new Color(0, 0, 0, 0);
+                env.Sky = null;
+            }
         }
 
         // Hide Sequence controller if present (kept from your original)
