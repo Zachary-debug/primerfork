@@ -1,1 +1,1 @@
-I've given up on the idea of designing this to be usable by others. The core of the tool is public, but some classes will refer to assets that are private. I keep my 3D models separate from this repo, and it's private because it contains the blob models which I don't want to be public. But the code itself is here for you to the extent it's useful.
+Thsi is just a spinoff of primertools, so credit to whoever did it.
